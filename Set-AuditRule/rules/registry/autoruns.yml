@@ -1,0 +1,26 @@
+title: Autoruns
+id: B23A16AD-500B-4956-A5A1-6C8D4745065C
+status: experimental
+description: Adversaries might query the following queries for autoruns information
+references:
+author: Roberto Rodriguez (Cyb3rWard0g), OTR (Open Threat Research)
+date: 2020/06/07
+rule_category: registry
+rule:
+    registry_paths:
+        - "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+        - "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+        - "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run"
+        - "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce"
+        - "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunService"
+        - "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceService"
+        - "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunService"
+        - "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnceService"
+    well_known_sid_type: WorldSid
+    rights:
+        - QueryValues
+        - SetValue
+    inheritance_flags: None
+    propagation_flags: None
+    audit_flags:
+        - Success
