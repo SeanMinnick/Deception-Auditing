@@ -1186,5 +1186,5 @@ https://github.com/samratashok/Deploy-Deception
     }
 
     # Add auditing to the decoy group
-    Set-AuditRUle -GroupName $DecoyGroupName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing  
+    Set-AuditRule -GroupName $DecoyGroupName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing  
 }
