@@ -12,7 +12,7 @@ Required Dependencies: ActiveDirectory Module by Microsoft
 
 ##################################### Helper Functions #####################################
 
-function Create-DecoyUser
+function New-DecoyUser
 {
 <#
 .SYNOPSIS
@@ -75,7 +75,7 @@ https://github.com/samratashok/Deploy-Deception
 
 }
 
-function Create-DecoyComputer
+function New-DecoyComputer
 {
 <#
 .SYNOPSIS
@@ -123,7 +123,7 @@ https://github.com/samratashok/Deploy-Deception
 
 }
 
-function Create-DecoyGroup
+function New-DecoyGroup
 {
 <#
 .SYNOPSIS
@@ -276,7 +276,7 @@ https://github.com/samratashok/Deploy-Deception
     New-Object psobject -Property $ObjectProperties
 }
 
-function Set-AuditRUle
+function Set-AuditRule
 {
 <#
 .SYNOPSIS
@@ -588,7 +588,7 @@ https://github.com/samratashok/Deploy-Deception
         Set-ADUser -Identity $DecoySamAccountName -ServicePrincipalNames @{Add=$SPN}
     }
 
-    Set-AuditRUle -SAMAccountName $DecoySamAccountName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -Remove $RemoveAuditing
+    Set-AuditRule -SAMAccountName $DecoySamAccountName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -Remove $RemoveAuditing
   
 }
 
@@ -717,8 +717,8 @@ https://github.com/samratashok/Deploy-Deception
 
     # Add auditing for DecoyUser and Slave on ReadProperty for x500uniqueIdentifier user property.
 
-    Set-AuditRUle -SAMAccountName $DecoySamAccountName -Principal Everyone  -Right ReadProperty -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a -AuditFlag Success -RemoveAuditing $RemoveAuditing
-    Set-AuditRUle -SAMAccountName $SlaveSamAccountName -Principal Everyone -Right ReadProperty -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a -AuditFlag Success -RemoveAuditing $RemoveAuditing
+    Set-AuditRule -SAMAccountName $DecoySamAccountName -Principal Everyone  -Right ReadProperty -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a -AuditFlag Success -RemoveAuditing $RemoveAuditing
+    Set-AuditRule -SAMAccountName $SlaveSamAccountName -Principal Everyone -Right ReadProperty -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a -AuditFlag Success -RemoveAuditing $RemoveAuditing
 
 }
 
@@ -821,7 +821,7 @@ https://github.com/samratashok/Deploy-Deception
 
         [Parameter(Position = 2, Mandatory = $False)]
         [String]
-        [ValidateSet ("DomainAdminsMemebership","DCSyncRights")]
+        [ValidateSet ("DomainAdminsMembership","DCSyncRights")]
         $Technique,
 
         [Parameter(Position = 3, Mandatory = $False)]
@@ -880,12 +880,11 @@ https://github.com/samratashok/Deploy-Deception
         # Set the Deocy user's interesting privileges.
         switch($Technique)
         {
-            "DomainAdminsMemebership"
+            "DomainAdminsMembership"
             {
                 # The user will actually be a part of the DA group but cannot logon.
                 Write-Verbose "Adding $DecoySamAccountName to the Domain Admins Group."
                 Add-ADGroupMember -Identity "Domain Admins" -Members $DecoySamAccountName
-                $isDA = $True
             }
             "DCSyncRights"
             {          
@@ -1078,7 +1077,7 @@ https://github.com/samratashok/Deploy-Deception
     }
 
     # Add auditing to the decoy computer
-    Set-AuditRUle -ComputerName $DecoyComputerName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing
+    Set-AuditRule -ComputerName $DecoyComputerName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing
 }
 
 function Deploy-GroupDeception
