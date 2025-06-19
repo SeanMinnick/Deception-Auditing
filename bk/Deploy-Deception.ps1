@@ -276,141 +276,182 @@ https://github.com/samratashok/Deploy-Deception
     New-Object psobject -Property $ObjectProperties
 }
 
-function Set-AuditRule
-{
-<#
-.SYNOPSIS
-Helper function to set auditing for an object in domain.
- 
-.DESCRIPTION
-Helper function to set auditing for an object in domain.
-
-.PARAMETER UserName
-Username to set SACL for. 
-
-.PARAMETER SamAccountName
-SamAccountName of a user to set SACL for.
-
-.PARAMETER DistinguisedName
-DistinguishedName of a user to set SACL for. 
-
-.PARAMETER ComputerName
-ComputerName to set SACL for. 
-
-.PARAMETER GroupName
-GroupName to set SACL for. 
-
-.PARAMETER OUName
-OUName to set SACL for.
-
-.PARAMETER Principal
-The Principal (user or group) for which auditing is turned on when they use Rights defined by the Right or GUID paramter.
-
-.PARAMETER Right
-Thr Right for which auditing is turned on when used by the principal specified with the Principal parameter.
-Default is ReadProperty right.
-
-.PARAMETER GUID
-GUID for the property for which auditing is turned on when Princpal uses Right on the property.
-
-.PARAMETER AuditFlag
-Turn on Auditing for Success or Failure. Default is Success.
-
-.PARAMETER RemoveAuditing
-Remove previously added Auditing ACE.
-
-.LINK
-https://www.labofapenetrationtester.com/2018/10/deploy-deception.html
-https://github.com/samratashok/Deploy-Deception
-#> 
-    [CmdletBinding()] Param(
-        [Parameter(Position = 0, Mandatory = $False)]
-        [String]
-        $UserName,
-
-        [Parameter(Position = 1, Mandatory = $False)]
-        [String]
-        $SAMAccountName,
-        
-        [Parameter(Position = 2, Mandatory = $False)]
-        [String]
-        $DistinguishedName,
-
-        [Parameter(Position = 3, Mandatory = $False)]
-        [String]
-        $ComputerName,
-        
-        [Parameter(Position = 4, Mandatory = $False)]
-        [String]
-        $GroupName,
-
-        [Parameter(Position = 5, Mandatory = $False)]
-        [String]
-        $OUName,
-
-        [Parameter(Position = 6, Mandatory = $False)]
-        [String]
-        $Principal,
-
-        [Parameter(Position = 7, Mandatory = $False)]
-        [String]
-        [ValidateSet ("GenericAll","GenericRead","GenericWrite","ReadControl","ReadProperty","WriteDacl","WriteOwner","WriteProperty")]
-        $Right = "ReadProperty",
-
-        [Parameter(Position = 8, Mandatory = $False)]
-        [String]
-        $GUID,
-
-        [Parameter(Position = 9, Mandatory = $False)]
-        [String]
-        [ValidateSet ("Success","Failure")]
-        $AuditFlag = "Success",
-
-        [Parameter(Mandatory = $False)]
-        [Bool]
-        $RemoveAuditing
+function New-DynamicParam {
+    param (
+        [Parameter(Mandatory)][string]$Name,
+        [array]$ValidateSetOptions,
+        [switch]$Mandatory,
+        [switch]$ValueFromPipeline,
+        [switch]$ValueFromPipelineByPropertyName
     )
-    
-    $objectdetails = Get-ADObjectDetails -SAMAccountName $SamAccountName -ComputerName $ComputerName -GroupName $GroupName -OUName $OUName
 
-    $ACL = $objectdetails.ACL
+    $attrib = New-Object System.Management.Automation.ParameterAttribute
+    $attrib.Mandatory = $Mandatory.IsPresent
+    $attrib.ValueFromPipeline = $ValueFromPipeline.IsPresent
+    $attrib.ValueFromPipelineByPropertyName = $ValueFromPipelineByPropertyName.IsPresent
 
-    $sid = New-Object System.Security.Principal.NTAccount($Principal)
-    if (!$GUID)
-    {
-        $AuditRule = New-Object DirectoryServices.ActiveDirectoryAuditRule($sid,$Right,$AuditFlag)
+    $collection = New-Object 'System.Collections.ObjectModel.Collection[System.Attribute]'
+    $collection.Add($attrib)
+
+    if ($ValidateSetOptions) {
+        $validateSet = New-Object System.Management.Automation.ValidateSetAttribute($ValidateSetOptions)
+        $collection.Add($validateSet)
     }
 
-    # Set Auditing for a specific property in the object with the property or attribute GUID
-    # Interesting GUID
-    # userAccountControl - bf967a68-0de6-11d0-a285-00aa003049e2
-    # x500uniqueIdentifier - d07da11f-8a3d-42b6-b0aa-76c962be719a
-    elseif ($GUID)
-    {
-        $objectGuid = New-Object Guid $GUID
-        $AuditRule = New-Object DirectoryServices.ActiveDirectoryAuditRule($sid,$Right,$AuditFlag,$objectGuid)
-    }
-    else
-    {
-        Write-Warning "Please specify a right. If you are targeting a specific object type, please provide a GUID."
-    }
-
-    $objDN = $objectdetails.DistinguishedName
-
-    if(!$RemoveAuditing)
-    {
-        Write-Verbose "Turning ""$AuditFlag"" Auditing on for ""$objDN"" when ""$Principal"" uses ""$Right"" right."
-        $ACL.AddAuditRule($AuditRule)
-    }
-    else
-    {
-        Write-Verbose "Removing ""$AuditFlag"" Auditing for ""$objDN"" when ""$Principal"" uses ""$Right"" right."
-        $ACL.RemoveAuditRule($AuditRule)
-    }
-
-    Set-Acl "AD:\$objDN" -AclObject $ACL
-
+    $type = if ($Name -in @('Rights', 'AuditFlags')) { [array] } else { [string] }
+    return New-Object System.Management.Automation.RuntimeDefinedParameter($Name, $type, $collection)
 }
+
+function Set-AuditRule {
+    <#
+    .SYNOPSIS
+    Sets an access control entry (ACE) on the SACL of a file, registry, or AD object.
+
+    .DESCRIPTION
+    This function supports auditing on various object types, including registry keys, files, and Active Directory objects.
+    Parameters dynamically adapt based on the selected object type.
+
+    .EXAMPLE
+    Set-AuditRule -RegistryPath 'HKLM:\Software\MyKey' -WellKnownSidType WorldSid -Rights ReadKey -InheritanceFlags None -PropagationFlags None -AuditFlags Success
+    #>
+
+    [CmdletBinding(DefaultParameterSetName='None')]
+    param (
+        [Parameter(Mandatory, ParameterSetName = 'Registry')]
+        [ValidateScript({Test-Path $_})]
+        [string]$RegistryPath,
+
+        [Parameter(Mandatory, ParameterSetName = 'File')]
+        [ValidateScript({Test-Path $_})]
+        [string]$FilePath,
+
+        [Parameter(Mandatory, ParameterSetName = 'AD')]
+        [string]$AdObjectPath,
+
+        [Parameter(Mandatory)]
+        [ArgumentCompleter({
+            param($CommandName, $ParameterName, $WordToComplete)
+            [System.Security.Principal.WellKnownSidType].DeclaredMembers |
+                Where-Object { $_.IsStatic } |
+                Select-Object -ExpandProperty Name |
+                Where-Object { $_ -like "$WordToComplete*" }
+        })]
+        [string]$WellKnownSidType
+    )
+
+    DynamicParam {
+        $paramOptions = @()
+        $paramSet = $PSCmdlet.ParameterSetName
+
+        switch ($paramSet) {
+            'AD' {
+                $paramOptions += @{
+                    Name = 'Rights'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.DirectoryServices.ActiveDirectoryRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                }
+                $paramOptions += @{
+                    Name = 'InheritanceFlags'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.DirectoryServices.ActiveDirectorySecurityInheritance]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                }
+                $paramOptions += @{
+                    Name = 'AuditFlags'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.Security.AccessControl.AuditFlags]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                }
+                $paramOptions += @{ Name = 'AttributeGUID'; Mandatory = $false }
+
+                if ("AccountDomainAdminsSid", "AccountDomainUsersSid", "AccountEnterpriseAdminsSid" -contains $WellKnownSidType) {
+                    $paramOptions = @(@{ Name = 'DomainSid'; Mandatory = $true }) + $paramOptions
+                }
+            }
+
+            'Registry' {
+                $paramOptions += @{
+                    Name = 'Rights'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.Security.AccessControl.RegistryRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                }
+            }
+
+            'File' {
+                $paramOptions += @{
+                    Name = 'Rights'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.Security.AccessControl.FileSystemRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                }
+            }
+        }
+
+        if ($paramSet -in 'Registry', 'File') {
+            $paramOptions += @(
+                @{
+                    Name = 'InheritanceFlags'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.Security.AccessControl.InheritanceFlags]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                },
+                @{
+                    Name = 'PropagationFlags'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.Security.AccessControl.PropagationFlags]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                },
+                @{
+                    Name = 'AuditFlags'
+                    Mandatory = $true
+                    ValidateSetOptions = ([System.Security.AccessControl.AuditFlags]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                }
+            )
+        }
+
+        $RuntimeParams = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        foreach ($p in $paramOptions) {
+            $RuntimeParam = New-DynamicParam @p
+            $RuntimeParams.Add($p.Name, $RuntimeParam)
+        }
+        return $RuntimeParams
+    }
+
+    begin {
+        $PSBoundParameters.GetEnumerator() | ForEach-Object { Set-Variable -Name $_.Key -Value $_.Value -Scope Local }
+    }
+
+    process {
+        try {
+            $sid = if ($DomainSid) {
+                New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]$WellKnownSidType, [System.Security.Principal.SecurityIdentifier]$DomainSid)
+            } else {
+                New-Object System.Security.Principal.SecurityIdentifier([System.Security.Principal.WellKnownSidType]$WellKnownSidType, $null)
+            }
+
+            switch ($PSCmdlet.ParameterSetName) {
+                'AD' {
+                    $AuditRuleObject = if ($AttributeGUID) {
+                        New-Object System.DirectoryServices.ActiveDirectoryAuditRule($sid, $Rights, $AuditFlags, [guid]$AttributeGUID, $InheritanceFlags, [guid]'00000000-0000-0000-0000-000000000000')
+                    } else {
+                        New-Object System.DirectoryServices.ActiveDirectoryAuditRule($sid, $Rights, $AuditFlags, [guid]'00000000-0000-0000-0000-000000000000', $InheritanceFlags, [guid]'00000000-0000-0000-0000-000000000000')
+                    }
+                    $path = $AdObjectPath
+                }
+                'Registry' {
+                    $AuditRuleObject = New-Object System.Security.AccessControl.RegistryAuditRule($sid, $Rights, $InheritanceFlags, $PropagationFlags, $AuditFlags)
+                    $path = $RegistryPath
+                }
+                'File' {
+                    $AuditRuleObject = New-Object System.Security.AccessControl.FileSystemAuditRule($sid, $Rights, $InheritanceFlags, $PropagationFlags, $AuditFlags)
+                    $path = $FilePath
+                }
+            }
+
+            $acl = Get-Acl -Path $path -Audit
+            $acl.SetAuditRule($AuditRuleObject)
+            Set-Acl -Path $path -AclObject $acl
+        } catch {
+            Write-Error "Failed to set audit rule: $_"
+        }
+    }
+}
+
 
 ################################## End of Helper Functions #################################
 
