@@ -629,7 +629,10 @@ https://github.com/samratashok/Deploy-Deception
         Set-ADUser -Identity $DecoySamAccountName -ServicePrincipalNames @{Add=$SPN}
     }
 
-    Set-AuditRule -SAMAccountName $DecoySamAccountName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -Remove $RemoveAuditing
+    $UserObject = Get-ADUser $DecoySamAccountName
+    $AdObjectPath = "AD:$($UserObject.DistinguishedName)"
+    Set-AuditRule -AdObjectPath $AdObjectPath -WellKnownSidType WorldSid -Rights $Right -InheritanceFlags None -AuditFlags $AuditFlag -AttributeGUID $GUID
+
   
 }
 
