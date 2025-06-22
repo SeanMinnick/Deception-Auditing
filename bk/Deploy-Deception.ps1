@@ -357,24 +357,24 @@ function New-DynamicParam {
 function Set-AuditRule {
     <#
     .SYNOPSIS
-    Sets an access control entry (ACE) on the SACL of a file, registry, or AD object.
+    Sets or removes an access control entry (ACE) on the SACL of a file, registry, or AD object.
 
     .DESCRIPTION
     This function supports auditing on various object types, including registry keys, files, and Active Directory objects.
-    Parameters dynamically adapt based on the selected object type.
+    Parameters dynamically adapt based on the selected object type. Use -RemoveAuditing to remove existing audit entries.
 
     .EXAMPLE
     Set-AuditRule -RegistryPath 'HKLM:\Software\MyKey' -WellKnownSidType WorldSid -Rights ReadKey -InheritanceFlags None -PropagationFlags None -AuditFlags Success
     #>
 
-    [CmdletBinding(DefaultParameterSetName='None')]
+    [CmdletBinding(DefaultParameterSetName = 'None')]
     param (
         [Parameter(Mandatory, ParameterSetName = 'Registry')]
-        [ValidateScript({Test-Path $_})]
+        [ValidateScript({ Test-Path $_ })]
         [string]$RegistryPath,
 
         [Parameter(Mandatory, ParameterSetName = 'File')]
-        [ValidateScript({Test-Path $_})]
+        [ValidateScript({ Test-Path $_ })]
         [string]$FilePath,
 
         [Parameter(Mandatory, ParameterSetName = 'AD')]
@@ -388,7 +388,10 @@ function Set-AuditRule {
                 Select-Object -ExpandProperty Name |
                 Where-Object { $_ -like "$WordToComplete*" }
         })]
-        [string]$WellKnownSidType
+        [string]$WellKnownSidType,
+
+        [Parameter(Mandatory = $false)]
+        [bool]$RemoveAuditing = $false
     )
 
     DynamicParam {
@@ -397,22 +400,27 @@ function Set-AuditRule {
 
         switch ($paramSet) {
             'AD' {
-                $paramOptions += @{
-                    Name = 'Rights'
-                    Mandatory = $true
-                    ValidateSetOptions = ([System.DirectoryServices.ActiveDirectoryRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
-                }
-                $paramOptions += @{
-                    Name = 'InheritanceFlags'
-                    Mandatory = $true
-                    ValidateSetOptions = ([System.DirectoryServices.ActiveDirectorySecurityInheritance]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
-                }
-                $paramOptions += @{
-                    Name = 'AuditFlags'
-                    Mandatory = $true
-                    ValidateSetOptions = ([System.Security.AccessControl.AuditFlags]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
-                }
-                $paramOptions += @{ Name = 'AttributeGUID'; Mandatory = $false }
+                $paramOptions += @(
+                    @{
+                        Name = 'Rights'
+                        Mandatory = $true
+                        ValidateSetOptions = ([System.DirectoryServices.ActiveDirectoryRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                    },
+                    @{
+                        Name = 'InheritanceFlags'
+                        Mandatory = $true
+                        ValidateSetOptions = ([System.DirectoryServices.ActiveDirectorySecurityInheritance]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                    },
+                    @{
+                        Name = 'AuditFlags'
+                        Mandatory = $true
+                        ValidateSetOptions = ([System.Security.AccessControl.AuditFlags]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                    },
+                    @{
+                        Name = 'AttributeGUID'
+                        Mandatory = $false
+                    }
+                )
 
                 if ("AccountDomainAdminsSid", "AccountDomainUsersSid", "AccountEnterpriseAdminsSid" -contains $WellKnownSidType) {
                     $paramOptions = @(@{ Name = 'DomainSid'; Mandatory = $true }) + $paramOptions
@@ -420,19 +428,23 @@ function Set-AuditRule {
             }
 
             'Registry' {
-                $paramOptions += @{
-                    Name = 'Rights'
-                    Mandatory = $true
-                    ValidateSetOptions = ([System.Security.AccessControl.RegistryRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
-                }
+                $paramOptions += @(
+                    @{
+                        Name = 'Rights'
+                        Mandatory = $true
+                        ValidateSetOptions = ([System.Security.AccessControl.RegistryRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                    }
+                )
             }
 
             'File' {
-                $paramOptions += @{
-                    Name = 'Rights'
-                    Mandatory = $true
-                    ValidateSetOptions = ([System.Security.AccessControl.FileSystemRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
-                }
+                $paramOptions += @(
+                    @{
+                        Name = 'Rights'
+                        Mandatory = $true
+                        ValidateSetOptions = ([System.Security.AccessControl.FileSystemRights]).DeclaredMembers | Where-Object IsStatic | Select-Object -ExpandProperty Name
+                    }
+                )
             }
         }
 
@@ -465,7 +477,9 @@ function Set-AuditRule {
     }
 
     begin {
-        $PSBoundParameters.GetEnumerator() | ForEach-Object { Set-Variable -Name $_.Key -Value $_.Value -Scope Local }
+        $PSBoundParameters.GetEnumerator() | ForEach-Object {
+            Set-Variable -Name $_.Key -Value $_.Value -Scope Local
+        }
     }
 
     process {
@@ -479,30 +493,52 @@ function Set-AuditRule {
             switch ($PSCmdlet.ParameterSetName) {
                 'AD' {
                     $AuditRuleObject = if ($AttributeGUID) {
-                        New-Object System.DirectoryServices.ActiveDirectoryAuditRule($sid, $Rights, $AuditFlags, [guid]$AttributeGUID, $InheritanceFlags, [guid]'00000000-0000-0000-0000-000000000000')
+                        New-Object System.DirectoryServices.ActiveDirectoryAuditRule(
+                            $sid, $Rights, $AuditFlags, [guid]$AttributeGUID, $InheritanceFlags, [guid]'00000000-0000-0000-0000-000000000000'
+                        )
                     } else {
-                        New-Object System.DirectoryServices.ActiveDirectoryAuditRule($sid, $Rights, $AuditFlags, [guid]'00000000-0000-0000-0000-000000000000', $InheritanceFlags, [guid]'00000000-0000-0000-0000-000000000000')
+                        New-Object System.DirectoryServices.ActiveDirectoryAuditRule(
+                            $sid, $Rights, $AuditFlags, [guid]'00000000-0000-0000-0000-000000000000', $InheritanceFlags, [guid]'00000000-0000-0000-0000-000000000000'
+                        )
                     }
                     $path = $AdObjectPath
                 }
+
                 'Registry' {
-                    $AuditRuleObject = New-Object System.Security.AccessControl.RegistryAuditRule($sid, $Rights, $InheritanceFlags, $PropagationFlags, $AuditFlags)
+                    $AuditRuleObject = New-Object System.Security.AccessControl.RegistryAuditRule(
+                        $sid, $Rights, $InheritanceFlags, $PropagationFlags, $AuditFlags
+                    )
                     $path = $RegistryPath
                 }
+
                 'File' {
-                    $AuditRuleObject = New-Object System.Security.AccessControl.FileSystemAuditRule($sid, $Rights, $InheritanceFlags, $PropagationFlags, $AuditFlags)
+                    $AuditRuleObject = New-Object System.Security.AccessControl.FileSystemAuditRule(
+                        $sid, $Rights, $InheritanceFlags, $PropagationFlags, $AuditFlags
+                    )
                     $path = $FilePath
                 }
             }
 
             $acl = Get-Acl -Path $path -Audit
-            $acl.SetAuditRule($AuditRuleObject)
+
+            if ($RemoveAuditing) {
+                Write-Verbose "Removing audit rule..."
+                $removed = $acl.RemoveAuditRule($AuditRuleObject)
+                if (-not $removed) {
+                    Write-Warning "No matching audit rule was found to remove."
+                }
+            } else {
+                Write-Verbose "Adding audit rule..."
+                $acl.SetAuditRule($AuditRuleObject)
+            }
+
             Set-Acl -Path $path -AclObject $acl
         } catch {
-            Write-Error "Failed to set audit rule: $_"
+            Write-Error "Failed to set or remove audit rule: $_"
         }
     }
 }
+
 
 
 ################################## End of Helper Functions #################################
