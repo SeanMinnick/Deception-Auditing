@@ -1283,3 +1283,76 @@ https://github.com/samratashok/Deploy-Deception
     # Add auditing to the decoy group
     Set-AuditRule -GroupName $DecoyGroupName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing  
 }
+
+function Deploy-OUDeception {
+<#
+.SYNOPSIS
+Deploys a decoy Organizational Unit (OU) to attract adversary attention and logs Security Event 4662 for specific rights used against it.
+
+.DESCRIPTION
+This function configures auditing on a specified OU so that when a user (principal) accesses the OU using a specified right or accesses a specific property (GUID), a Security Event 4662 is logged.
+
+.PARAMETER OUName
+The name (Relative Distinguished Name) of the decoy OU (e.g., "OU=FakeOU").
+
+.PARAMETER OUDistinguishedName
+The full Distinguished Name (e.g., "OU=FakeOU,DC=corp,DC=example,DC=com").
+
+.PARAMETER Principal
+User or group for which the auditing is applied. Default is "Everyone".
+
+.PARAMETER Right
+The right for which auditing is turned on. Default is ReadProperty.
+
+.PARAMETER GUID
+GUID of the property for which access should be audited.
+
+.PARAMETER AuditFlag
+Audit on Success or Failure. Default is Success.
+
+.PARAMETER RemoveAuditing
+Remove previously added auditing ACE instead of adding it.
+
+.EXAMPLE
+Deploy-OUDeception -OUDistinguishedName "OU=Decoys,DC=corp,DC=example,DC=com" -GUID <GUID> -Right ReadProperty -Verbose
+
+.LINK
+https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4662
+#>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$OUDistinguishedName,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Principal = "Everyone",
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet ("GenericAll","GenericRead","GenericWrite","ReadControl","ReadProperty","WriteDacl","WriteOwner","WriteProperty")]
+        [string]$Right = "ReadProperty",
+
+        [Parameter(Mandatory = $false)]
+        [string]$GUID,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet ("Success","Failure")]
+        [string]$AuditFlag = "Success",
+
+        [Parameter(Mandatory = $false)]
+        [bool]$RemoveAuditing = $false
+    )
+
+    try {
+        Write-Verbose "Deploying decoy OU auditing for $OUDistinguishedName"
+        Set-AuditRule -DistinguishedName $OUDistinguishedName `
+                      -Principal $Principal `
+                      -Right $Right `
+                      -GUID $GUID `
+                      -AuditFlag $AuditFlag `
+                      -RemoveAuditing $RemoveAuditing
+        Write-Output "Audit rule successfully applied to $OUDistinguishedName"
+    }
+    catch {
+        Write-Error "Failed to apply audit rule to OU: $_"
+    }
+}
