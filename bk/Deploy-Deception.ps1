@@ -1417,3 +1417,59 @@ https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/ev
         Write-Error "Failed to apply audit rule to OU: $_"
     }
 }
+
+function Deploy-GPODeception {
+    <#
+    .SYNOPSIS
+    Applies auditing to a GPO object to detect access attempts.
+
+    .DESCRIPTION
+    Sets SACL entries on the GPO to log security events when a specified user or group accesses or modifies the GPO.
+
+    .PARAMETER GpoName
+    Name of the GPO to audit.
+
+    .PARAMETER Principal
+    User or group to monitor (default: Everyone).
+
+    .PARAMETER Right
+    The AD right to audit (default: ReadProperty).
+
+    .PARAMETER AuditFlag
+    Success or Failure auditing (default: Success).
+
+    .PARAMETER RemoveAuditing
+    Remove audit rules instead of adding them.
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$GpoName,
+
+        [Parameter()]
+        [string]$Principal = "Everyone",
+
+        [Parameter()]
+        [ValidateSet("GenericAll","GenericRead","GenericWrite","ReadControl","ReadProperty","WriteDacl","WriteOwner","WriteProperty")]
+        [string]$Right = "ReadProperty",
+
+        [Parameter()]
+        [ValidateSet("Success", "Failure")]
+        [string]$AuditFlag = "Success",
+
+        [Parameter()]
+        [bool]$RemoveAuditing = $false
+    )
+
+    $gpo = Get-GPO -Name $GpoName -ErrorAction Stop
+    $gpoDN = "CN={$($gpo.Id)},CN=Policies,CN=System,$((Get-ADDomain).DistinguishedName)"
+
+    Write-Verbose "Configuring auditing on GPO: $GpoName ($gpoDN)"
+
+    Set-AuditRule -AdObjectPath "AD:\$gpoDN" `
+                  -WellKnownSidType WorldSid `
+                  -Rights $Right `
+                  -AuditFlags $AuditFlag `
+                  -InheritanceFlags None `
+                  -RemoveAuditing:$RemoveAuditing
+}
