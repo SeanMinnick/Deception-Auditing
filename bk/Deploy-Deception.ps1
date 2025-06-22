@@ -161,6 +161,58 @@ https://github.com/samratashok/Deploy-Deception
 
 }
 
+function New-DecoyOU {
+<#
+.SYNOPSIS
+Create a decoy Organizational Unit (OU).
+
+.DESCRIPTION
+Creates a new OU in Active Directory. Must be run on a Domain Controller or from a system with RSAT tools and appropriate privileges.
+
+.PARAMETER OUName
+Name of the OU to be created.
+
+.PARAMETER ParentDistinguishedName
+DistinguishedName of the parent OU or container where the new OU will be created. If not specified, the root of the domain is used.
+
+.EXAMPLE
+PS C:\> New-DecoyOU -OUName "DecoyServers" -Verbose
+Creates a new OU named "DecoyServers" in the root of the domain.
+
+.EXAMPLE
+PS C:\> New-DecoyOU -OUName "DecoyWorkstations" -ParentDistinguishedName "OU=Departments,DC=example,DC=com" -Verbose
+Creates a new OU under "OU=Departments,DC=example,DC=com".
+
+.LINK
+https://docs.microsoft.com/en-us/powershell/module/activedirectory/new-adorganizationalunit
+#>
+    [CmdletBinding()]
+    param (
+        [Parameter(Position = 0, Mandatory = $true)]
+        [string]$OUName,
+
+        [Parameter(Position = 1, Mandatory = $false)]
+        [string]$ParentDistinguishedName
+    )
+
+    try {
+        if ($ParentDistinguishedName) {
+            $OUPath = "OU=$OUName,$ParentDistinguishedName"
+        } else {
+            $domainDN = (Get-ADDomain).DistinguishedName
+            $OUPath = "OU=$OUName,$domainDN"
+        }
+
+        Write-Verbose "Creating OU: $OUPath"
+        New-ADOrganizationalUnit -Name $OUName -Path ($OUPath -replace "^OU=.*?,") -ProtectedFromAccidentalDeletion $true
+        Write-Output "OU '$OUName' created successfully at '$OUPath'"
+    }
+    catch {
+        Write-Error "Failed to create OU: $_"
+    }
+}
+
+
 function Get-ADObjectDetails
 {
 <#
