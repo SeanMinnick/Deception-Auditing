@@ -212,6 +212,31 @@ https://docs.microsoft.com/en-us/powershell/module/activedirectory/new-adorganiz
     }
 }
 
+function New-DecoyGPO {
+    <#
+    .SYNOPSIS
+    Creates a decoy Group Policy Object.
+
+    .DESCRIPTION
+    Creates a fake GPO with a plausible name to serve as a honeypot. Useful for detecting unauthorized enumeration or modification attempts.
+
+    .PARAMETER Name
+    Name of the decoy GPO to create.
+
+    .EXAMPLE
+    New-DecoyGPO -Name "Password Policy Backup"
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $gpo = New-GPO -Name $Name -Comment "Decoy GPO for detection purposes"
+    Write-Verbose "Created decoy GPO: $($gpo.DisplayName)"
+    return $gpo
+}
+
 
 function Get-ADObjectDetails
 {
