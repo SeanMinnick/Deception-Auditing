@@ -215,27 +215,95 @@ https://docs.microsoft.com/en-us/powershell/module/activedirectory/new-adorganiz
 function New-DecoyGPO {
     <#
     .SYNOPSIS
-    Creates a decoy Group Policy Object.
+    Creates a decoy Group Policy Object and makes it attractive to attackers.
 
     .DESCRIPTION
-    Creates a fake GPO with a plausible name to serve as a honeypot. Useful for detecting unauthorized enumeration or modification attempts.
+    Creates a GPO and optionally:
+    - Links it to an OU
+    - Adds fake logon scripts to SYSVOL
+    - Grants GpoRead permissions to "Authenticated Users"
+    - Sets an optional GPO comment
 
     .PARAMETER Name
-    Name of the decoy GPO to create.
+    Name of the decoy GPO.
+
+    .PARAMETER Comment
+    Optional text comment to assign to the GPO (visible in GPMC).
+
+    .PARAMETER TargetOU
+    Distinguished Name (DN) of the OU to link the GPO to.
+
+    .PARAMETER AddFakeScripts
+    If set, creates fake logon script files in SYSVOL.
+
+    .PARAMETER MakeReadable
+    If set, grants GpoRead to "Authenticated Users" for enumeration bait.
 
     .EXAMPLE
-    New-DecoyGPO -Name "Password Policy Backup"
+    New-DecoyGPO -Name "PrivilegedAccessBackup" -Comment "Legacy GPO for admin access" `
+                 -TargetOU "OU=Decoys,DC=domain,DC=com" -AddFakeScripts -MakeReadable
     #>
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$Name
+        [string]$Name,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Comment = $null,
+
+        [Parameter(Mandatory = $false)]
+        [string]$TargetOU,
+
+        [switch]$AddFakeScripts,
+
+        [switch]$MakeReadable
     )
 
-    $gpo = New-GPO -Name $Name -Comment "Decoy GPO for detection purposes"
-    Write-Verbose "Created decoy GPO: $($gpo.DisplayName)"
-    return $gpo
+    try {
+        $gpo = New-GPO -Name $Name
+
+        if ($Comment) {
+            Set-GPO -Guid $gpo.Id -Comment $Comment
+            Write-Verbose "Set GPO comment: $Comment"
+        }
+
+        Write-Verbose "Created GPO: $($gpo.DisplayName) [$($gpo.Id)]"
+
+        if ($TargetOU) {
+            New-GPLink -Name $Name -Target $TargetOU -Enforced $true
+            Write-Verbose "Linked GPO to OU: $TargetOU"
+        }
+
+        if ($MakeReadable) {
+            Set-GPPermissions -Name $Name -TargetName "Authenticated Users" -TargetType Group -PermissionLevel GpoRead
+            Write-Verbose "Granted GpoRead permissions to Authenticated Users"
+        }
+
+        if ($AddFakeScripts) {
+            $domain = (Get-ADDomain).DNSRoot
+            $gpoID = $gpo.Id
+            $sysvolPath = "\\$domain\SYSVOL\$domain\Policies\{$gpoID}\User\Scripts\Logon"
+
+            New-Item -Path $sysvolPath -ItemType Directory -Force | Out-Null
+
+            @(
+                "resetAdminPassword.ps1",
+                "enableRDP.bat",
+                "mapDrives.vbs"
+            ) | ForEach-Object {
+                $fakePath = Join-Path $sysvolPath $_
+                "REM Fake script for deception. Do not use." | Set-Content -Path $fakePath -Force
+                Write-Verbose "Created fake script: $fakePath"
+            }
+        }
+
+        return $gpo
+    }
+    catch {
+        Write-Error "Failed to create or configure decoy GPO: $_"
+    }
 }
+
 
 
 function Get-ADObjectDetails
