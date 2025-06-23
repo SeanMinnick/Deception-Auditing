@@ -1405,7 +1405,7 @@ https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/ev
 
     try {
         Write-Verbose "Deploying decoy OU auditing for $OUDistinguishedName"
-        Set-AuditRule -DistinguishedName $OUDistinguishedName `
+        Set-AuditRule -AdObjectPath $OUDistinguishedName `
                       -Principal $Principal `
                       -Right $Right `
                       -GUID $GUID `
