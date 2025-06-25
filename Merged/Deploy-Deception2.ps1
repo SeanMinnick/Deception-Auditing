@@ -4,6 +4,7 @@
 
 File: Deploy-Deception.ps1
 Author: Nikhil Mittal (@nikhil_mitt)
+Modifications : Sean Minnick (@SeanMinnick)
 Description: A PowerShell module to deploy active directory decoy objects.
 Required Dependencies: ActiveDirectory Module by Microsoft
 
