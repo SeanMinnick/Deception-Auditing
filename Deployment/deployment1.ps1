@@ -57,7 +57,6 @@ try {
     Deploy-GPODeception -GpoName $gpoName -Right ReadProperty -AuditFlag Success -Verbose
 
     Write-Host "`n[✔] Honeypot deployment completed successfully." -ForegroundColor Green
-}
-catch {
+} catch {
     Write-Error "[-] Error during honeypot deployment: $_"
 }
