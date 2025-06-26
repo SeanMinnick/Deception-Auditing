@@ -61,6 +61,3 @@ try {
 catch {
     Write-Error "[-] Error during honeypot deployment: $_"
 }
-finally {
-    Stop-Transcript
-}
