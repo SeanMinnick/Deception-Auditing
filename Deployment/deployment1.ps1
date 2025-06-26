@@ -58,7 +58,7 @@ try {
 
     Write-Host "`n[✔] Honeypot deployment completed successfully."
 } catch {
-    Write-Error '[-] Error during honeypot deployment: $_'
+    Write-Error '[-] Error during honeypot deployment: $($_)'
 } finally {
-    Write-Host "Deployment Success"
+    Write-Host 'Deployment Success'
 }
