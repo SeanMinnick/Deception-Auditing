@@ -8,7 +8,7 @@ Required Dependencies: ActiveDirectory Module by Microsoft
 #>
 
 $ErrorActionPreference = 'Stop'
-Import-Module "$PSScriptRoot\Deploy-Deception2.psm1" -Force
+#Import-Module "$PSScriptRoot\Deploy-Deception2.psm1" -Force
 Write-Host " Deploying Active Directory Honeypots..."
 
 try {
