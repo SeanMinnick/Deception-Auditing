@@ -9,7 +9,7 @@ Required Dependencies: ActiveDirectory Module by Microsoft
 
 $ErrorActionPreference = 'Stop'
 Import-Module "$PSScriptRoot\Deploy-Deception2.psm1" -Force
-Write-Host "`n[+] Deploying Active Directory Honeypots..."
+Write-Host " Deploying Active Directory Honeypots..."
 
 try {
     # --- Create a Decoy OU ---
@@ -17,14 +17,14 @@ try {
     $domainDN = (Get-ADDomain).DistinguishedName
     $decoyOUDN = "OU=$decoyOUName,$domainDN"
 
-    Write-Host "`n[+] Creating OU: $decoyOUName"
+    Write-Host " Creating OU: $decoyOUName"
     New-DecoyOU -OUName $decoyOUName | Out-Null
 
-    Write-Host "[+] Deploying OU auditing..."
+    Write-Host " Deploying OU auditing..."
     Deploy-OUDeception -OUDistinguishedName $decoyOUDN -AuditFlag Success -Verbose
 
     # --- Create Decoy Users ---
-    Write-Host "`n[+] Creating and deploying decoy users..."
+    Write-Host " Creating and deploying decoy users..."
     for ($i = 1; $i -le 3; $i++) {
         $first = "decoy"
         $last = "user$i"
@@ -35,7 +35,7 @@ try {
     }
 
     # --- Create Decoy Computers ---
-    Write-Host "`n[+] Creating and deploying decoy computers..."
+    Write-Host "`n Creating and deploying decoy computers..."
     for ($i = 1; $i -le 3; $i++) {
         $compName = "DECOY-COMP0$i"
 
@@ -45,7 +45,7 @@ try {
 
     # --- Create and Deploy Decoy GPO ---
     $gpoName = "PrivilegedAccessBackup"
-    Write-Host "`n[+] Creating and deploying decoy GPO: $gpoName"
+    Write-Host " Creating and deploying decoy GPO: $gpoName"
 
     New-DecoyGPO -Name $gpoName `
                  -Comment "Legacy admin script GPO - audit before deletion" `
@@ -56,9 +56,9 @@ try {
 
     Deploy-GPODeception -GpoName $gpoName -Right ReadProperty -AuditFlag Success -Verbose
 
-    Write-Host "`n[✔] Honeypot deployment completed successfully."
+    Write-Host " Honeypot deployment completed successfully."
 } catch {
-    Write-Error '[-] Error during honeypot deployment: $($_)'
+    Write-Error ' Error during honeypot deployment: $($_)'
 } finally {
     Write-Host 'Deployment Success'
 }
