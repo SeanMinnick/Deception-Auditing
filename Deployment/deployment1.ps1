@@ -8,12 +8,12 @@ Required Dependencies: ActiveDirectory Module by Microsoft
 #>
 
 $ErrorActionPreference = 'Stop'
-Import-Module "$PSScriptRoot\HoneypotTools.psm1" -Force
+Import-Module "$PSScriptRoot\Deploy-Deception2.psm1" -Force
 Write-Host "`n[+] Deploying Active Directory Honeypots..."
 
 try {
     # --- Create a Decoy OU ---
-    $decoyOUName = "Decoys"
+    $decoyOUName = "AutoDecoys"
     $domainDN = (Get-ADDomain).DistinguishedName
     $decoyOUDN = "OU=$decoyOUName,$domainDN"
 
