@@ -1,19 +1,10 @@
-<#
-
-File: deployment1.ps1
-Author : Sean Minnick (@SeanMinnick)
-Description: A PowerShell script to automatically deploy a suite of AD deceptive objects.
-Required Dependencies: ActiveDirectory Module by Microsoft
-
-#>
-
 $ErrorActionPreference = 'Stop'
 Import-Module GroupPolicy -ErrorAction Stop
 Write-Host " Deploying Active Directory Honeypots..."
 
 try {
-    # --- Create a Decoy OU ---
-    $decoyOUName = "AutoDecoys"
+    # --- Ask user for Decoy OU Name ---
+    $decoyOUName = Read-Host "Enter name for the decoy OU (e.g., AutoDecoys)"
     $domainDN = (Get-ADDomain).DistinguishedName
     $decoyOUDN = "OU=$decoyOUName,$domainDN"
 
@@ -23,28 +14,28 @@ try {
     Write-Host " Deploying OU auditing..."
     Deploy-OUDeception -OUDistinguishedName $decoyOUDN -AuditFlag Success -Verbose
 
-    # --- Create Decoy Users ---
-    Write-Host " Creating and deploying decoy users..."
-    for ($i = 1; $i -le 3; $i++) {
-        $first = "decoy"
-        $last = "user$i"
-        $pass = "P@ssw0rd$i"
+    # --- Prompt for Decoy Users ---
+    $userCount = Read-Host "How many decoy users do you want to create?"
+    for ($i = 1; $i -le [int]$userCount; $i++) {
+        $first = Read-Host "Enter first name for user $i"
+        $last = Read-Host "Enter last name for user $i"
+        $pass = Read-Host "Enter password for $first $last"
 
         New-DecoyUser -UserFirstName $first -UserLastName $last -Password $pass -OUDistinguishedName $decoyOUDN |
             Deploy-UserDeception -UserFlag PasswordNeverExpires -PasswordInDescription "legacyAdmin123!" -Verbose
     }
 
-    # --- Create Decoy Computers ---
-    Write-Host "`n Creating and deploying decoy computers..."
-    for ($i = 1; $i -le 3; $i++) {
-        $compName = "DECOY-COMP0$i"
+    # --- Prompt for Decoy Computers ---
+    $compCount = Read-Host "How many decoy computers do you want to create?"
+    for ($i = 1; $i -le [int]$compCount; $i++) {
+        $compName = Read-Host "Enter name for computer $i (e.g., DECOY-COMP01)"
 
         New-DecoyComputer -ComputerName $compName -OUDistinguishedName $decoyOUDN |
             Deploy-ComputerDeception -OperatingSystem "Windows Server 2003" -PropertyFlag TrustedForDelegation -Verbose
     }
 
-    # --- Create and Deploy Decoy GPO ---
-    $gpoName = "PrivilegedAccessBackup"
+    # --- Prompt for GPO Name ---
+    $gpoName = Read-Host "Enter name for the decoy GPO"
     Write-Host " Creating and deploying decoy GPO: $gpoName"
 
     New-DecoyGPO -Name $gpoName `
