@@ -1268,42 +1268,34 @@ https://github.com/samratashok/Deploy-Deception
         $RemoveAuditing = $False
     )
 
-    if ($SPN)
-    {
-        Write-Verbose "Setting $SPN to decoy computer $DecoyComputerName."
-        Set-ADComputer -Identity $DecoyComputerName -ServicePrincipalNames @{Add=$SPN}
-    }
+    process {
+        if ($SPN) {
+            Write-Verbose "Setting $SPN to decoy computer $DecoyComputerName."
+            Set-ADComputer -Identity $DecoyComputerName -ServicePrincipalNames @{Add=$SPN}
+        }
 
-    if($OperatingSystem)
-    {
-        Write-Verbose "Setting $OperatingSystem to decoy computer $DecoyComputerName."
-        Set-ADComputer -OperatingSystem $OperatingSystem -Identity $DecoyComputerName
-    }
+        if ($OperatingSystem) {
+            Write-Verbose "Setting $OperatingSystem to decoy computer $DecoyComputerName."
+            Set-ADComputer -OperatingSystem $OperatingSystem -Identity $DecoyComputerName
+        }
 
-    if ($PropertyFlag)
-    {
-        # Set the Deocy computeraccount userflags.
-        Write-Verbose "Setting $PropertyFlag to decoy computer $DecoyComputerName."
-        switch($PropertyFlag)
-        {
-        
-            "AllowReversiblePasswordEncryption"
-            {
-                Set-ADComputer -Identity $DecoyComputerName -AllowReversiblePasswordEncryption $true
-            }
-            "PasswordNeverExpires"
-            {
-                Set-ADComputer -Identity $DecoyComputerName -PasswordNeverExpires $true
-            }
-            "TrustedForDelegation"
-            {
-                Set-ADComputer -Identity $DecoyComputerName -TrustedForDelegation $true
+        if ($PropertyFlag) {
+            Write-Verbose "Setting $PropertyFlag to decoy computer $DecoyComputerName."
+            switch ($PropertyFlag) {
+                "AllowReversiblePasswordEncryption" {
+                    Set-ADComputer -Identity $DecoyComputerName -AllowReversiblePasswordEncryption $true
+                }
+                "PasswordNeverExpires" {
+                    Set-ADComputer -Identity $DecoyComputerName -PasswordNeverExpires $true
+                }
+                "TrustedForDelegation" {
+                    Set-ADComputer -Identity $DecoyComputerName -TrustedForDelegation $true
+                }
             }
         }
-    }
 
-    # Add auditing to the decoy computer
-    Set-AuditRule -ComputerName $DecoyComputerName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing
+        Set-AuditRule -ComputerName $DecoyComputerName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing
+    }
 }
 
 function Deploy-GroupDeception
