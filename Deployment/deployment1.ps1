@@ -31,7 +31,7 @@ try {
         $compName = Read-Host "Enter name for computer $i (e.g., DECOY-COMP01)"
 
         New-DecoyComputer -ComputerName $compName -OUDistinguishedName $decoyOUDN
-        Deploy-ComputerDeception -DecoyComputerName $compName -Verbose
+        Deploy-ComputerDeception -ComputerName $compName -Verbose
     }
 
     # --- Prompt for GPO Name ---
