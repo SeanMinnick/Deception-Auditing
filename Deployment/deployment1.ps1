@@ -30,8 +30,8 @@ try {
     for ($i = 1; $i -le [int]$compCount; $i++) {
         $compName = Read-Host "Enter name for computer $i (e.g., DECOY-COMP01)"
 
-        New-DecoyComputer -ComputerName $compName -OUDistinguishedName $decoyOUDN |
-            Deploy-ComputerDeception -OperatingSystem "Windows Server 2003" -PropertyFlag TrustedForDelegation -Verbose
+        New-DecoyComputer -ComputerName $compName -OUDistinguishedName $decoyOUDN
+        Deploy-ComputerDeception -DecoyComputerName $compName -Verbose
     }
 
     # --- Prompt for GPO Name ---
