@@ -16,8 +16,12 @@ New-DecoyGPO - Allows you to create a new GPO, you can set any comment on the GP
 Set-AuditRule :
     The merged Set-AuditRule function allows users to create auditing rules on Registry Keys, Files, and Active Directory Objects.
 
-    Registry Example: 
+    Registry Examples: 
     Set-AuditRule -RegistryPath 'HKLM:\Software\MyKey' -WellKnownSidType WorldSid -Rights ReadKey -InheritanceFlags None -PropagationFlags None -AuditFlags Success
+
+    Set-AuditRule -RegistryPath "HKLM:\SOFTWARE\TestAuditKey" -WellKnownSidType WorldSid -Rights Delete -InheritanceFlags None -PropagationFlags None -AuditFlags Success -RemoveAuditing $true
+
+    Set-AuditRule -RegistryPath "HKLM:\SOFTWARE\TestAuditKey" -WellKnownSidType LocalSystemSid -Rights EnumerateSubKeys -InheritanceFlags None -PropagationFlags None -AuditFlags Success
 
     -RegistryPath --> Path to the registry key you want to audit
     -WellKnownSidType --> Specifies who the audit rule applies to, takes any SID type (AccountGuestSid, LocalSystemSid, etc...)
