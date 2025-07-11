@@ -30,3 +30,20 @@ Set-AuditRule :
     -PropogationFlags --> Works together with inheritance flags to control how the rule applies to child objects (None, NoPropogateInherit, InheritOnly)
     -AuditFlags --> Determines which events to audit: successful access, failed access, or both. (Success, Failure, None)
     -RemoveAuditing --> Optional Parameter which defaults to false, set to true to remove auditing rule on the specified object
+
+    File Examples:
+    Set-AuditRule -FilePath "C:\TestFolder\testfile.txt" -WellKnownSidType WorldSid -Rights ReadData -InheritanceFlags None -PropagationFlags None -AuditFlags Success
+
+    Set-AuditRule -FilePath "C:\TestFolder" -WellKnownSidType AccountDomainUsersSid -Rights WriteData -InheritanceFlags ContainerInherit,ObjectInherit -PropagationFlags InheritOnly -AuditFlags Failure
+
+    -FilePath --> Any valid file or folder path
+    All other parameters are identical to registry keys
+
+    Active Directory Examples:
+    Set-AuditRule -AdObjectPath "LDAP://CN=TestUser,CN=Users,DC=domain,DC=com" -WellKnownSidType AccountDomainUsersSid -Rights ReadProperty -InheritanceFlags ThisObjectOnly -AuditFlags Success
+
+    Set-AuditRule -AdObjectPath "LDAP://OU=TestOU,DC=domain,DC=com" -WellKnownSidType WorldSid -Rights ListChildren -InheritanceFlags ThisObjectOnly -AuditFlags Success -AttributeGUID "bf967aba-0de6-11d0-a285-00aa003049e2"
+
+    -AdObjectPath --> Any valid AD object path
+    Same parameters as other examples
+    -AttributeGUID --> Optional parameter that allows you to audit a specific attribute within an object
