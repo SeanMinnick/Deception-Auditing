@@ -13,7 +13,7 @@ New-DecoyGPO - Allows you to create a new GPO, you can set any comment on the GP
 
 ## Usage
 
-Set-AuditRule :
+Set-AuditRule
     The merged Set-AuditRule function allows users to create auditing rules on Registry Keys, Files, and Active Directory Objects.
 
     Registry Examples: 
