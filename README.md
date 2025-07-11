@@ -13,15 +13,15 @@ New-DecoyGPO - Allows you to create a new GPO, you can set any comment on the GP
 
 ## Usage
 
-Set-AuditRule
+# Set-AuditRule
 The merged Set-AuditRule function allows users to create auditing rules on Registry Keys, Files, and Active Directory Objects.
 
-Registry Examples: 
-```Set-AuditRule -RegistryPath 'HKLM:\Software\MyKey' -WellKnownSidType WorldSid -Rights ReadKey -InheritanceFlags None -PropagationFlags None -AuditFlags Success
+<u>Registry Examples:</u>
+Set-AuditRule -RegistryPath 'HKLM:\Software\MyKey' -WellKnownSidType WorldSid -Rights ReadKey -InheritanceFlags None -PropagationFlags None -AuditFlags Success
 
 Set-AuditRule -RegistryPath "HKLM:\SOFTWARE\TestAuditKey" -WellKnownSidType WorldSid -Rights Delete -InheritanceFlags None -PropagationFlags None -AuditFlags Success -RemoveAuditing $true
 
-Set-AuditRule -RegistryPath "HKLM:\SOFTWARE\TestAuditKey" -WellKnownSidType LocalSystemSid -Rights EnumerateSubKeys -InheritanceFlags None -PropagationFlags None -AuditFlags Success```
+Set-AuditRule -RegistryPath "HKLM:\SOFTWARE\TestAuditKey" -WellKnownSidType LocalSystemSid -Rights EnumerateSubKeys -InheritanceFlags None -PropagationFlags None -AuditFlags Success
 
 -RegistryPath --> Path to the registry key you want to audit
 -WellKnownSidType --> Specifies who the audit rule applies to, takes any SID type (AccountGuestSid, LocalSystemSid, etc...)
@@ -31,19 +31,32 @@ Set-AuditRule -RegistryPath "HKLM:\SOFTWARE\TestAuditKey" -WellKnownSidType Loca
 -AuditFlags --> Determines which events to audit: successful access, failed access, or both. (Success, Failure, None)
 -RemoveAuditing --> Optional Parameter which defaults to false, set to true to remove auditing rule on the specified object
 
-File Examples:
-```Set-AuditRule -FilePath "C:\TestFolder\testfile.txt" -WellKnownSidType WorldSid -Rights ReadData -InheritanceFlags None -PropagationFlags None -AuditFlags Success
+<u>File Examples:</u>
+Set-AuditRule -FilePath "C:\TestFolder\testfile.txt" -WellKnownSidType WorldSid -Rights ReadData -InheritanceFlags None -PropagationFlags None -AuditFlags Success
 
-Set-AuditRule -FilePath "C:\TestFolder" -WellKnownSidType AccountDomainUsersSid -Rights WriteData -InheritanceFlags ContainerInherit,ObjectInherit -PropagationFlags InheritOnly -AuditFlags Failure```
+Set-AuditRule -FilePath "C:\TestFolder" -WellKnownSidType AccountDomainUsersSid -Rights WriteData -InheritanceFlags ContainerInherit,ObjectInherit -PropagationFlags InheritOnly -AuditFlags Failure
 
 -FilePath --> Any valid file or folder path
 All other parameters are identical to registry keys
 
-Active Directory Examples:
-```Set-AuditRule -AdObjectPath "LDAP://CN=TestUser,CN=Users,DC=domain,DC=com" -WellKnownSidType AccountDomainUsersSid -Rights ReadProperty -InheritanceFlags ThisObjectOnly -AuditFlags Success
+<u>Active Directory Examples:</u>
+Set-AuditRule -AdObjectPath "LDAP://CN=TestUser,CN=Users,DC=domain,DC=com" -WellKnownSidType AccountDomainUsersSid -Rights ReadProperty -InheritanceFlags ThisObjectOnly -AuditFlags Success
 
-Set-AuditRule -AdObjectPath "LDAP://OU=TestOU,DC=domain,DC=com" -WellKnownSidType WorldSid -Rights ListChildren -InheritanceFlags ThisObjectOnly -AuditFlags Success -AttributeGUID "bf967aba-0de6-11d0-a285-00aa003049e2"```
+Set-AuditRule -AdObjectPath "LDAP://OU=TestOU,DC=domain,DC=com" -WellKnownSidType WorldSid -Rights ListChildren -InheritanceFlags ThisObjectOnly -AuditFlags Success -AttributeGUID "bf967aba-0de6-11d0-a285-00aa003049e2"
 
 -AdObjectPath --> Any valid AD object path
 Same parameters as other examples
 -AttributeGUID --> Optional parameter that allows you to audit a specific attribute within an object
+
+# New-DecoyUser
+Allows you to create new Users in AD, can be piped into Deploy-UserDeception to create an audited user
+
+<u>Examples:</u>
+New-DecoyUser -UserFirstName John -UserLastName Doe -Password P@ssw0rd
+
+New-DecoyUser -UserFirstName Admin -UserLastName Backup -Password StrongPass123 -OUDistinguishedName "OU=Decoys,DC=domain,DC=com"
+
+-UserFirstName --> Specifies first name of the decoy user
+-UserLastName --> Specifies last name of the decoy user
+-Password --> Sets a password for the decoy user
+-OUDistinguishedName --> Optional parameter to put user in a specific OU, defaults to Users OU
