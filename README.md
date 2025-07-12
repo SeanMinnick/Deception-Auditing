@@ -1,4 +1,4 @@
-## Deception-Auditing
+# Deception-Auditing
 
 This is a repository combining Deploy-Deception by Nikhil "SamratAshok" Mittal and Set-AuditRule by Roberto "Cyb3rWard0g" Rodriguez
 The goal is to create an updated toolset to deploy deceptive AD objects and audit them to detect activity.
@@ -11,9 +11,9 @@ New-DecoyOU - Allows you to create a new OU with any name that can be piped into
 
 New-DecoyGPO - Allows you to create a new GPO, you can set any comment on the GPO, link it to any OU, link intriguing scripts to make the GPO more appealing to attackers, and set the GPO to be readable to all authenticated users so that automatic enumeration will trigger audit rules. This is also piped into a similar Deploy-GPODeception function to enable auditing. 
 
-## Usage
+# Usage
 
-# Set-AuditRule
+## Set-AuditRule
 The merged Set-AuditRule function allows users to create auditing rules on Registry Keys, Files, and Active Directory Objects.
 
 <u>Registry Examples:</u>
@@ -48,7 +48,7 @@ Set-AuditRule -AdObjectPath "LDAP://OU=TestOU,DC=domain,DC=com" -WellKnownSidTyp
 Same parameters as other examples
 -AttributeGUID --> Optional parameter that allows you to audit a specific attribute within an object
 
-# New-DecoyUser
+## New-DecoyUser
 Allows you to create new Users in AD, can be piped into Deploy-UserDeception to create an audited user
 
 <u>Examples:</u>
