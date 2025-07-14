@@ -1554,7 +1554,7 @@ function Save-HoneyAudit {
     }
 
     if ($dns -contains $DistinguishedName) {
-        Write-Host "[*] DN already exists in audit list." -ForegroundColor Yellow
+        Write-Host "[*] DN already exists in audit list."
         return
     }
 
@@ -1563,7 +1563,7 @@ function Save-HoneyAudit {
     $secureString = ConvertTo-SecureString $joined -AsPlainText -Force
     $secureString | ConvertFrom-SecureString | Set-Content $Path
 
-    Write-Host "[+] DN saved to audit list." -ForegroundColor Green
+    Write-Host "[+] DN saved to audit list." 
 }
 
 function Pull-HoneyAudit {
@@ -1587,12 +1587,12 @@ function Pull-HoneyAudit {
         return
     }
 
-    Write-Host "`n--- Scanning for 4662 audit events for honeypots ---" -ForegroundColor Yellow
+    Write-Host "`n--- Scanning for 4662 audit events for honeypots ---" 
 
     foreach ($dn in $decodedList) {
         if (-not $dn.Trim()) { continue }
 
-        Write-Host "`n[$dn]" -ForegroundColor Cyan
+        Write-Host "`n[$dn]" 
 
         # Pull 4662 events and match message body to DN
         $events = Get-WinEvent -FilterHashtable @{
@@ -1603,11 +1603,11 @@ function Pull-HoneyAudit {
         }
 
         if (-not $events) {
-            Write-Host "No audit events found." -ForegroundColor DarkGray
+            Write-Host "No audit events found."
             continue
         }
 
-        Write-Host "Found $($events.Count) audit event(s):" -ForegroundColor Green
+        Write-Host "Found $($events.Count) audit event(s):"
 
         foreach ($event in $events) {
             $time = $event.TimeCreated
@@ -1622,6 +1622,6 @@ function Pull-HoneyAudit {
         }
     }
 
-    Write-Host "`n--- Audit summary complete ---" -ForegroundColor Yellow
+    Write-Host "`n--- Audit summary complete ---"
 }
 
