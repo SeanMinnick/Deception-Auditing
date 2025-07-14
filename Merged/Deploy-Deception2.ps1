@@ -1569,7 +1569,7 @@ function Save-HoneyAudit {
 function Pull-HoneyAudit {
     [CmdletBinding()]
     param (
-        [string]$FilePath = ".\honeyAuditList.bin"
+        [string]$FilePath = ".\honeyaudit.sec"
     )
 
     if (-not (Test-Path $FilePath)) {
