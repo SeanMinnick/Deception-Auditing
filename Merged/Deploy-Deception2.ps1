@@ -1535,3 +1535,71 @@ function Deploy-GPODeception {
                   -InheritanceFlags None `
                   -RemoveAuditing:$RemoveAuditing
 }
+
+function Save-HoneyAudit {
+    param(
+        [Parameter(Mandatory)]
+        [string]$DistinguishedName,
+
+        [string]$Path = ".\honeyaudit.sec"
+    )
+
+    # Create empty array if file doesn't exist
+    if (Test-Path $Path) {
+        $secure = Get-Content $Path | ConvertTo-SecureString
+        $plain = [System.Net.NetworkCredential]::new("", $secure).Password
+        $dns = $plain -split "`n"
+    } else {
+        $dns = @()
+    }
+
+    if ($dns -contains $DistinguishedName) {
+        Write-Host "[*] DN already exists in audit list." -ForegroundColor Yellow
+        return
+    }
+
+    $dns += $DistinguishedName
+    $joined = $dns -join "`n"
+    $secureString = ConvertTo-SecureString $joined -AsPlainText -Force
+    $secureString | ConvertFrom-SecureString | Set-Content $Path
+
+    Write-Host "[+] DN saved to audit list." -ForegroundColor Green
+}
+
+function Pull-HoneyAudit {
+    param (
+        [string]$Path = ".\honeyaudit.sec"
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Error "Encrypted honeypot file not found at $Path"
+        return
+    }
+
+    $secure = Get-Content $Path | ConvertTo-SecureString
+    $plain = [System.Net.NetworkCredential]::new("", $secure).Password
+    $dns = $plain -split "`n"
+
+    foreach ($dn in $dns) {
+        Write-Host "`n=== Audit for: $dn ===" -ForegroundColor Cyan
+
+        # Filter for Event ID 4662 that mentions this DN
+        $events = Get-WinEvent -LogName Security -FilterXPath "*[System[EventID=4662]]" -ErrorAction SilentlyContinue | 
+            Where-Object { $_.Message -like "*$dn*" }
+
+        if ($events.Count -eq 0) {
+            Write-Host "No audit events found." -ForegroundColor DarkGray
+        } else {
+            Write-Host "Found $($events.Count) audit event(s)." -ForegroundColor Green
+
+            foreach ($event in $events) {
+                $time = $event.TimeCreated
+                $msg = $event.Message -split "`n" | Select-String -Pattern "Object Type|Object Name|Accesses|Subject:" -SimpleMatch
+
+                Write-Host "[$time]"
+                $msg | ForEach-Object { Write-Host "  $_" }
+                Write-Host ""
+            }
+        }
+    }
+}
