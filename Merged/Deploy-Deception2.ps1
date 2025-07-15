@@ -1537,6 +1537,16 @@ function Deploy-GPODeception {
 }
 
 function Save-HoneyAudit {
+    <#
+    .SYNOPSIS
+    Saves AD objects based on Distinguished Name to a file for tracking purposes
+
+    .DESCRIPTION
+    Takes DNs of AD objects and adds their object GUID to a txt file to be used by other functions and track honeypots 
+
+    .PARAMETER DN
+    Distinguished Name of object to be added
+    #>
     param (
         [Parameter(Mandatory = $true)]
         [string]$DN
@@ -1564,6 +1574,13 @@ function Save-HoneyAudit {
 }
 
 function Pull-HoneyAudit {
+    <#
+    .SYNOPSIS
+    Gives a terminal output of recent audit events for honeypots saved for tracking
+
+    .DESCRIPTION
+    Reads the tracking file for GUIDs and checks event logs for recent auditing events. Prints these recent events into the terminal for review. 
+    #>
     $file = ".\honeyaudit.txt"
 
     if (!(Test-Path $file)) {
