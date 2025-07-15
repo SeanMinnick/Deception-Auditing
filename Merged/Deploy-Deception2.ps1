@@ -1579,7 +1579,14 @@ function Pull-HoneyAudit {
         }
     }
 
-    $events = Get-WinEvent -LogName Security -FilterHashtable @{Id = 4662} -ErrorAction SilentlyContinue
+    # FIXED: Use only FilterHashtable
+    try {
+        $events = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4662} -ErrorAction Stop
+    }
+    catch {
+        Write-Error "Failed to read Security log: $_"
+        return
+    }
 
     if (-not $events) {
         Write-Warning "No 4662 events found in Security log."
@@ -1602,10 +1609,12 @@ function Pull-HoneyAudit {
         } else {
             Write-Host "  Found $($matched.Count) events:"
             $matched | ForEach-Object {
-                Write-Host "    [$($_.TimeCreated)] - $($_.Id): $($_.Message.Split("`n")[0])"
+                Write-Host "    [$($_.TimeCreated)] - Event ID $($_.Id)"
+                Write-Host "      Summary: $($_.Message.Split(\"`n\") | Select-String 'Accesses\|Object Type\|Object Name')"
             }
         }
     }
 }
+
 
 
