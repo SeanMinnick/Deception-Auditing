@@ -1544,43 +1544,68 @@ function Save-HoneyAudit {
 
     $file = ".\honeyaudit.txt"
 
-    if (Test-Path $file) {
-        $existing = Get-Content $file
-        if ($existing -contains $DN) {
-            Write-Host "DN already exists in the audit list."
-            return
+    try {
+        $obj = Get-ADObject -Identity $DN -Properties ObjectGUID
+        $guid = $obj.ObjectGUID.Guid
+        $entry = "$($obj.DistinguishedName)|$guid"
+
+        if (!(Test-Path $file)) {
+            Write-Host "Creating new audit tracking file..."
+            Set-Content -Path $file -Value $entry
+        } else {
+            Add-Content -Path $file -Value $entry
         }
+
+        Write-Host "Saved audit tracking for: $DN"
     }
-
-    Add-Content -Path $file -Value $DN
-    Write-Host "Added DN to audit list: $DN"
+    catch {
+        Write-Error "Failed to resolve DN to object: $_"
+    }
 }
-
 
 function Pull-HoneyAudit {
     $file = ".\honeyaudit.txt"
 
     if (!(Test-Path $file)) {
-        Write-Warning "No audit file found at $file"
+        Write-Warning "Audit tracking file not found."
         return
     }
 
-    $dns = Get-Content $file
+    $entries = Get-Content $file | ForEach-Object {
+        $parts = $_ -split '\|'
+        [PSCustomObject]@{
+            DN   = $parts[0]
+            GUID = $parts[1].ToLower()
+        }
+    }
 
-    foreach ($dn in $dns) {
-        Write-Host "`n=== Auditing for DN: $dn ==="
+    $events = Get-WinEvent -LogName Security -FilterHashtable @{Id = 4662} -ErrorAction SilentlyContinue
 
-        $events = Get-WinEvent -LogName Security -FilterXPath "*[System[EventID=4662]]" |
-                  Where-Object { $_.Message -like "*$dn*" }
+    if (-not $events) {
+        Write-Warning "No 4662 events found in Security log."
+        return
+    }
 
-        if ($events.Count -eq 0) {
-            Write-Host "  No audit events found."
+    foreach ($entry in $entries) {
+        $matched = @()
+
+        foreach ($e in $events) {
+            $msg = $e.Message
+            if ($msg -like "*$($entry.GUID)*") {
+                $matched += $e
+            }
+        }
+
+        Write-Host "`n=== Audit Results for: $($entry.DN) ==="
+        if ($matched.Count -eq 0) {
+            Write-Host "  No events found."
         } else {
-            Write-Host "  Found $($events.Count) audit events:"
-            foreach ($event in $events) {
-                Write-Host "    [$($event.TimeCreated)] $($event.Id) - $($event.ProviderName)"
+            Write-Host "  Found $($matched.Count) events:"
+            $matched | ForEach-Object {
+                Write-Host "    [$($_.TimeCreated)] - $($_.Id): $($_.Message.Split("`n")[0])"
             }
         }
     }
 }
+
 
