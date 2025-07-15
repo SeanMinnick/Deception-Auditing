@@ -11,6 +11,10 @@ New-DecoyOU - Allows you to create a new OU with any name that can be piped into
 
 New-DecoyGPO - Allows you to create a new GPO, you can set any comment on the GPO, link it to any OU, link intriguing scripts to make the GPO more appealing to attackers, and set the GPO to be readable to all authenticated users so that automatic enumeration will trigger audit rules. This is also piped into a similar Deploy-GPODeception function to enable auditing. 
 
+Save-HoneyAudit - Allows you save a distinguished name of an AD object to a file in the same directory as the script, it will keep track of your honeypots and allow you to pull the audit events into your terminal at any time using Pull-HoneyAudit. Honeypot tracking file stores the GUID's of the objects added in a plaintext format. Encryption will be added. 
+
+Pull-HoneyAudit - Automatically pulls recent audit events from the honeypots saved with Save-HoneyAudit.
+
 # Usage
 
 ## Set-AuditRule
@@ -317,3 +321,22 @@ Options: GenericAll, GenericRead, GenericWrite, ReadControl, ReadProperty, Write
 -AuditFlag --> Success or Failure logging (default: Success)
 
 -RemoveAuditing --> Optional switch to remove previously set auditing rules
+
+## Save-HoneyAudit
+Saves an AD object into a records file to be tracked for later use.
+
+### Examples:
+Save-HoneyAudit -DN "OU=AuditTesting,DC=doazlab,DC=com"
+
+Save-HoneyAudit -DN "CN=fakeuser1,OU=Honeypots,DC=doazlab,DC=com"
+
+### Parameters:
+-DN --> Distinguished name of the target object to be saved for later use.
+
+## Pull-HoneyAudit
+Pulls recent audit events from Event Viewer for all objects stored via Save-HoneyAudit. Displays audit events for each object in terminal.
+
+### Examples:
+Pull-HoneyAudit
+
+No parameters are used, it will automatically use the same directory tracking file and run on all objects listed in the file.
