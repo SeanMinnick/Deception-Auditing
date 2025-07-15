@@ -1547,7 +1547,7 @@ function Save-HoneyAudit {
     try {
         $obj = Get-ADObject -Identity $DN -Properties ObjectGUID
         $guid = $obj.ObjectGUID.Guid
-        $entry = "$($obj.DistinguishedName)|$guid"
+        $entry = "$guid"
 
         if (!(Test-Path $file)) {
             Write-Host "Creating new audit tracking file..."
@@ -1571,15 +1571,8 @@ function Pull-HoneyAudit {
         return
     }
 
-    $entries = Get-Content $file | ForEach-Object {
-        $parts = $_ -split '\|'
-        [PSCustomObject]@{
-            DN   = $parts[0]
-            GUID = $parts[1].ToLower()
-        }
-    }
+    $guids = Get-Content $file
 
-    # FIXED: Use only FilterHashtable
     try {
         $events = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4662} -ErrorAction Stop
     }
@@ -1593,28 +1586,39 @@ function Pull-HoneyAudit {
         return
     }
 
-    foreach ($entry in $entries) {
+    foreach ($guid in $guids) {
+        try {
+            $obj = Get-ADObject -Filter {ObjectGUID -eq $guid} -Properties DistinguishedName
+            $dn = $obj.DistinguishedName
+        }
+        catch {
+            Write-Warning "Could not resolve GUID $guid to a DN. Skipping..."
+            continue
+        }
+
         $matched = @()
 
         foreach ($e in $events) {
-            $msg = $e.Message
-            if ($msg -like "*$($entry.GUID)*") {
+            if ($e.Message -like "*$guid*") {
                 $matched += $e
             }
         }
 
-        Write-Host "`n=== Audit Results for: $($entry.DN) ==="
+        Write-Host "`n=== Audit Results for: $dn ==="
         if ($matched.Count -eq 0) {
             Write-Host "  No events found."
-        } else {
+        }
+        else {
             Write-Host "  Found $($matched.Count) events:"
-            $matched | ForEach-Object {
-                Write-Host "    [$($_.TimeCreated)] - Event ID $($_.Id)"
-                Write-Host "      Summary: $($_.Message.Split(\"`n\") | Select-String 'Accesses\|Object Type\|Object Name')"
+            foreach ($evt in $matched) {
+                Write-Host "    [$($evt.TimeCreated)] - Event ID $($evt.Id)"
+                $summary = $evt.Message.Split("`n") | Where-Object { $_ -match 'Accesses|Object Type|Object Name' }
+                $summary | ForEach-Object { Write-Host "      $_" }
             }
         }
     }
 }
+
 
 
 
