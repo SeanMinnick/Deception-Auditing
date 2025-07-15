@@ -1599,7 +1599,7 @@ function Pull-HoneyAudit {
         if ($events.Count -eq 0) {
             Write-Host "  No audit events found for $dn "
         } else {
-            Write-Host "  Found $($events.Count) audit events for $dn:"
+            Write-Host "  Found $($events.Count) audit events for ${dn}:"
             foreach ($event in $events) {
                 Write-Host "    Time: $($event.TimeCreated)"
                 Write-Host "    Triggered by: $($event.Properties[5].Value)"
