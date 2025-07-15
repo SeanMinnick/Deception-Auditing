@@ -1537,75 +1537,50 @@ function Deploy-GPODeception {
 }
 
 function Save-HoneyAudit {
-    param(
-        [Parameter(Mandatory)]
-        [string]$DistinguishedName,
-
-        [string]$Path = ".\honeyaudit.sec"
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$DN
     )
 
-    # Create empty array if file doesn't exist
-    if (Test-Path $Path) {
-        $secure = Get-Content $Path | ConvertTo-SecureString
-        $plain = [System.Net.NetworkCredential]::new("", $secure).Password
-        $dns = $plain -split "`n"
-    } else {
-        $dns = @()
+    $file = ".\honeyaudit.txt"
+
+    if (Test-Path $file) {
+        $existing = Get-Content $file
+        if ($existing -contains $DN) {
+            Write-Host "DN already exists in the audit list."
+            return
+        }
     }
 
-    if ($dns -contains $DistinguishedName) {
-        Write-Host "[*] DN already exists in audit list."
-        return
-    }
-
-    $dns += $DistinguishedName
-    $joined = $dns -join "`n"
-    $secureString = ConvertTo-SecureString $joined -AsPlainText -Force
-    $secureString | ConvertFrom-SecureString | Set-Content $Path
-
-    Write-Host "[+] DN saved to audit list." 
+    Add-Content -Path $file -Value $DN
+    Write-Host "Added DN to audit list: $DN"
 }
 
+
 function Pull-HoneyAudit {
-    [CmdletBinding()]
-    param (
-        [string]$Path = ".\honeyaudit.sec"
-    )
+    $file = ".\honeyaudit.txt"
 
-    # Prompt for decryption key securely
-    $SecureKey = Read-Host -Prompt "Enter decryption key" -AsSecureString
-    $Key = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureKey))
-
-    if (-not (Test-Path $Path)) {
-        Write-Warning "Encrypted audit file not found at $Path"
+    if (!(Test-Path $file)) {
+        Write-Warning "No audit file found at $file"
         return
     }
 
-    try {
-        $EncryptedContent = Get-Content $Path | ConvertFrom-SecureString
-        $PlainContent = $EncryptedContent | ConvertTo-SecureString -Key ([Text.Encoding]::UTF8.GetBytes($Key)) | ConvertFrom-SecureString
-        $DNs = ($PlainContent | ConvertFrom-SecureString) -split "`n"
-    } catch {
-        Write-Error "Failed to decrypt audit list. Check your key."
-        return
-    }
+    $dns = Get-Content $file
 
-    foreach ($dn in $DNs) {
-        Write-Host "`n[+] Checking logs for: ${dn}" 
+    foreach ($dn in $dns) {
+        Write-Host "`n=== Auditing for DN: $dn ==="
 
-        $events = Get-WinEvent -LogName Security -FilterXPath "*[System[(EventID=4662)]]" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Message -like "*${dn}*" }
+        $events = Get-WinEvent -LogName Security -FilterXPath "*[System[EventID=4662]]" |
+                  Where-Object { $_.Message -like "*$dn*" }
 
         if ($events.Count -eq 0) {
-            Write-Host "  No audit events found for ${dn} "
+            Write-Host "  No audit events found."
         } else {
-            Write-Host "  Found $($events.Count) audit events for ${dn}:"
+            Write-Host "  Found $($events.Count) audit events:"
             foreach ($event in $events) {
-                Write-Host "    Time: $($event.TimeCreated)"
-                Write-Host "    Triggered by: $($event.Properties[5].Value)"
-                Write-Host "    Message: $($event.Message -replace '\s{2,}', ' ' -replace '\r?\n', ' ')"
-                Write-Host "----"
+                Write-Host "    [$($event.TimeCreated)] $($event.Id) - $($event.ProviderName)"
             }
         }
     }
 }
+
