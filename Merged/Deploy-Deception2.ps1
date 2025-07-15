@@ -1569,59 +1569,43 @@ function Save-HoneyAudit {
 function Pull-HoneyAudit {
     [CmdletBinding()]
     param (
-        [string]$FilePath = ".\honeyaudit.sec"
+        [string]$Path = ".\honeyaudit.sec"
     )
 
-    if (-not (Test-Path $FilePath)) {
-        Write-Error "Encrypted audit list file not found at $FilePath"
+    # Prompt for decryption key securely
+    $SecureKey = Read-Host -Prompt "Enter decryption key" -AsSecureString
+    $Key = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureKey))
+
+    if (-not (Test-Path $Path)) {
+        Write-Warning "Encrypted audit file not found at $Path"
         return
     }
 
     try {
-        $secure = Get-Content $FilePath | ConvertTo-SecureString
-        $decodedList = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-        ) -split "`n"
+        $EncryptedContent = Get-Content $Path | ConvertFrom-SecureString
+        $PlainContent = $EncryptedContent | ConvertTo-SecureString -Key ([Text.Encoding]::UTF8.GetBytes($Key)) | ConvertFrom-SecureString
+        $DNs = ($PlainContent | ConvertFrom-SecureString) -split "`n"
     } catch {
-        Write-Error "Failed to read or decrypt audit list: $_"
+        Write-Error "Failed to decrypt audit list. Check your key."
         return
     }
 
-    Write-Host "`n--- Scanning for 4662 audit events for honeypots ---" 
+    foreach ($dn in $DNs) {
+        Write-Host "`n[+] Checking logs for: $dn" 
 
-    foreach ($dn in $decodedList) {
-        if (-not $dn.Trim()) { continue }
+        $events = Get-WinEvent -LogName Security -FilterXPath "*[System[(EventID=4662)]]" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Message -like "*$dn*" }
 
-        Write-Host "`n[$dn]" 
-
-        # Pull 4662 events and match message body to DN
-        $events = Get-WinEvent -FilterHashtable @{
-            LogName = 'Security';
-            Id = 4662
-        } | Where-Object {
-            $_.Message -like "*$dn*"
-        }
-
-        if (-not $events) {
-            Write-Host "No audit events found."
-            continue
-        }
-
-        Write-Host "Found $($events.Count) audit event(s):"
-
-        foreach ($event in $events) {
-            $time = $event.TimeCreated
-            $message = $event.Message
-
-            # Extract triggering user if possible
-            $trigger = ($message -split "`n") | Where-Object { $_ -match "Account Name:" } |
-                        Select-Object -First 1
-            $trigger = $trigger -replace '.*Account Name:\s+', ''
-
-            Write-Host "[$time] triggered by: $trigger"
+        if ($events.Count -eq 0) {
+            Write-Host "  No audit events found for $dn "
+        } else {
+            Write-Host "  Found $($events.Count) audit events for $dn:"
+            foreach ($event in $events) {
+                Write-Host "    Time: $($event.TimeCreated)"
+                Write-Host "    Triggered by: $($event.Properties[5].Value)"
+                Write-Host "    Message: $($event.Message -replace '\s{2,}', ' ' -replace '\r?\n', ' ')"
+                Write-Host "----"
+            }
         }
     }
-
-    Write-Host "`n--- Audit summary complete ---"
 }
-
