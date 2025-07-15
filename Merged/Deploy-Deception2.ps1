@@ -1591,13 +1591,13 @@ function Pull-HoneyAudit {
     }
 
     foreach ($dn in $DNs) {
-        Write-Host "`n[+] Checking logs for: $dn" 
+        Write-Host "`n[+] Checking logs for: ${dn}" 
 
         $events = Get-WinEvent -LogName Security -FilterXPath "*[System[(EventID=4662)]]" -ErrorAction SilentlyContinue |
-            Where-Object { $_.Message -like "*$dn*" }
+            Where-Object { $_.Message -like "*${dn}*" }
 
         if ($events.Count -eq 0) {
-            Write-Host "  No audit events found for $dn "
+            Write-Host "  No audit events found for ${dn} "
         } else {
             Write-Host "  Found $($events.Count) audit events for ${dn}:"
             foreach ($event in $events) {
