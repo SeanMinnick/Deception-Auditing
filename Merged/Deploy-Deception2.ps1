@@ -222,7 +222,6 @@ function New-DecoyGPO {
     .DESCRIPTION
     Creates a GPO and optionally:
     - Links it to an OU
-    - Adds fake logon scripts to SYSVOL
     - Grants GpoRead permissions to "Authenticated Users"
     - Sets an optional GPO comment
 
@@ -234,9 +233,6 @@ function New-DecoyGPO {
 
     .PARAMETER TargetOU
     Distinguished Name (DN) of the OU to link the GPO to.
-
-    .PARAMETER AddFakeScripts
-    If set, creates fake logon script files in SYSVOL.
 
     .PARAMETER MakeReadable
     If set, grants GpoRead to "Authenticated Users" for enumeration bait.
@@ -256,8 +252,6 @@ function New-DecoyGPO {
         [Parameter(Mandatory = $false)]
         [string]$TargetOU,
 
-        [switch]$AddFakeScripts,
-
         [switch]$MakeReadable
     )
 
@@ -272,31 +266,13 @@ function New-DecoyGPO {
         Write-Verbose "Created GPO: $($gpo.DisplayName) [$($gpo.Id)]"
 
         if ($TargetOU) {
-            New-GPLink -Name $Name -Target $TargetOU -Enforced $true
+            New-GPLink -Name $Name -Target $TargetOU -Enforced "Yes"
             Write-Verbose "Linked GPO to OU: $TargetOU"
         }
 
         if ($MakeReadable) {
             Set-GPPermissions -Name $Name -TargetName "Authenticated Users" -TargetType Group -PermissionLevel GpoRead
             Write-Verbose "Granted GpoRead permissions to Authenticated Users"
-        }
-
-        if ($AddFakeScripts) {
-            $domain = (Get-ADDomain).DNSRoot
-            $gpoID = $gpo.Id
-            $sysvolPath = "\\$domain\SYSVOL\$domain\Policies\{$gpoID}\User\Scripts\Logon"
-
-            New-Item -Path $sysvolPath -ItemType Directory -Force | Out-Null
-
-            @(
-                "resetAdminPassword.ps1",
-                "enableRDP.bat",
-                "mapDrives.vbs"
-            ) | ForEach-Object {
-                $fakePath = Join-Path $sysvolPath $_
-                "REM Fake script for deception. Do not use." | Set-Content -Path $fakePath -Force
-                Write-Verbose "Created fake script: $fakePath"
-            }
         }
 
         return $gpo
