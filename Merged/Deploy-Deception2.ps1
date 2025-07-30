@@ -1022,8 +1022,9 @@ https://github.com/samratashok/Deploy-Deception
         }
     }
 
-    # Add auditing to the decoy user
-    Set-AuditRule -UserName $DecoyUserName -SAMAccountName $DecoySamAccountName -DistinguishedName $DecoyDistinguishedName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing
+    $UserObject = Get-ADUser $DecoySamAccountName
+    $AdObjectPath = "AD:$($UserObject.DistinguishedName)"
+    Set-AuditRule -AdObjectPath $AdObjectPath -WellKnownSidType WorldSid -Rights $Right -InheritanceFlags None -AuditFlags $AuditFlag -AttributeGUID $GUID
     
 }
 
@@ -1123,7 +1124,7 @@ Deploy-ComputerDeception -ComputerName decoy01 -PropertyFlag TrustedForDelegatio
         }
     }
 
-    # Get the AD object path and call Set-AuditRule (replicating working pattern)
+    # Get the AD object path and call Set-AuditRule
     $ComputerObject = Get-ADComputer -Identity $ComputerName
     $AdObjectPath = "AD:$($ComputerObject.DistinguishedName)"
 
@@ -1237,8 +1238,12 @@ https://github.com/samratashok/Deploy-Deception
         Add-ADGroupMember -Identity $AddToGroup -Members $DecoyGroupName
     }
 
-    # Add auditing to the decoy group
-    Set-AuditRule -GroupName $DecoyGroupName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing  
+    $GroupObject = Get-ADGroup -Identity $DecoyGroupName
+    $AdObjectPath = "AD:$($GroupObject.DistinguishedName)"
+
+    Write-Verbose "Setting audit rule on $AdObjectPath for principal '$Principal' with right '$Right'."
+
+    Set-AuditRule -AdObjectPath $AdObjectPath -WellKnownSidType WorldSid -Rights $Right -InheritanceFlags None -AuditFlags $AuditFlag -AttributeGUID $GUID -RemoveAuditing:$RemoveAuditing 
 }
 
 function Deploy-OUDeception {
