@@ -1027,147 +1027,111 @@ https://github.com/samratashok/Deploy-Deception
     
 }
 
-function Deploy-ComputerDeception
-{
+function Deploy-ComputerDeception {
 <#
 .SYNOPSIS
-Deploys the specific decoy computer to log Security Event 4662 when a specific Right is used against it.
+Deploys a decoy computer to log Security Event 4662 when a specific Right is used against it.
 
 .DESCRIPTION
-This function sets up auditing when a specified Right is used by a specifed principal against the decoy computer object.
+Sets up auditing for a specific right or attribute access against a decoy computer object in AD.
+Must be run with domain admin privileges on a DC. Supports setting attacker-attractive properties and configuring auditing via SACLs.
 
-The function must be run on a DC with domain admin privileges. There are multiple computer attributes and flags
-that can be set while deploying the decoy. These attributes and flags make the decoy interesting for an attacker. 
-When a right, say, ReadProperty is used to access the decoy computer, a Security Event 4662 is logged. 
-
-Note that Windows Settings -> Security Settings -> Advanced Audit Policy Configuration -> DS Access - Audit Directory Service Access
-Group Policy needs to be configured to enable 4662 logging. 
-
-.PARAMETER DecoyComputerName
-SamAccountName of the decoy computer.  
+.PARAMETER ComputerName
+SamAccountName of the decoy computer.
 
 .PARAMETER OperatingSystem
-OperatingSystem attribute for the decoy computer. 
+OperatingSystem attribute for the decoy computer.
 
 .PARAMETER SPN
 Set 'interesting' SPN for the decoy computer in the format servicename/host.
 
 .PARAMETER PropertyFlag
-A decoy computer property which would be 'interesting' for an attacker.
+A property such as TrustedForDelegation to make the decoy more interesting.
 
 .PARAMETER Principal
-The Principal (user or group) for which auditing is turned on when they use Rights defined by the Right or GUID paramter.
+Principal (user or group) to audit when it accesses the computer. Defaults to Everyone.
 
 .PARAMETER Right
-Thr Right for which auditing is turned on when used by the principal specified with the Principal parameter.
-Default is ReadProperty right.
+AD permission right to audit. Defaults to ReadProperty.
 
 .PARAMETER GUID
-GUID for the property for which auditing is turned on when Princpal uses Right on the property.
+Attribute GUID to target specific properties.
 
 .PARAMETER AuditFlag
-Turn on Auditing for Success or Failure. Default is Success.
+Success or Failure auditing. Defaults to Success.
 
 .PARAMETER RemoveAuditing
-Remove previously added Auditing ACE.
+Removes previously added audit ACEs if true.
 
 .EXAMPLE
-PS C:\> Create-DecoyComputer -ComputerName revert-web -Verbose | Deploy-ComputerDeception -PropertyFlag TrustedForDelegation -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a  -Verbose
-Creates a decoy computer that has Unconstrained Delegation enabled and a 4662 is logged whenever x500uniqueIdentifier - d07da11f-8a3d-42b6-b0aa-76c962be719a property or all the properties
-of the computer are read.
-
-.EXAMPLE
-PS C:\> Deploy-ComputerDeception -DecoyComputerName comp1 -PropertyFlag TrustedForDelegation -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a  -Verbose
-Uses an existing computer object and set Unconstrained Delegation on it. A 4662 is logged whenever x500uniqueIdentifier - d07da11f-8a3d-42b6-b0aa-76c962be719a property or all the properties
-of the computer are read.
-
-Using a real machine for the decoy is always recommended as it is harder to identify as a decoy. 
-
-
-.EXAMPLE
-PS C:\> Deploy-ComputerDeception -DecoyComputerName comp1 -OperatingSystem "Windows Server 2003" -Right ReadControl -Verbose
-Uses an existing computer object and set its Operating System property to Windows Server 2003. 
-
-A 4662 is logged whenever DACL or all the properties of the computer are read.
-
-Using a real machine for the decoy is always recommended as it is harder to identify as a decoy. 
-
-.LINK
-https://www.labofapenetrationtester.com/2018/10/deploy-deception.html
-https://github.com/samratashok/Deploy-Deception
+Deploy-ComputerDeception -ComputerName decoy01 -PropertyFlag TrustedForDelegation -GUID d07da11f-8a3d-42b6-b0aa-76c962be719a -Verbose
 #>
     [CmdletBinding()] Param(
-        
-        [Parameter(Position = 0, Mandatory = $False,ValueFromPipeline = $True)]
-        [String]
-        $ComputerName,
+        [Parameter(Position = 0, Mandatory = $true)]
+        [String] $ComputerName,
 
-        [Parameter(Position = 1, Mandatory = $False)]
-        [String]
-        $OperatingSystem,
+        [Parameter(Position = 1, Mandatory = $false)]
+        [String] $OperatingSystem,
 
-        [Parameter(Position = 2, Mandatory = $False)]
-        [String]
-        $SPN,
+        [Parameter(Position = 2, Mandatory = $false)]
+        [String] $SPN,
 
-        [Parameter(Position = 3, Mandatory = $False)]
-        [String]
-        [ValidateSet ("AllowReversiblePasswordEncryption","PasswordNeverExpires","TrustedForDelegation")]
-        $PropertyFlag,
+        [Parameter(Position = 3, Mandatory = $false)]
+        [ValidateSet("AllowReversiblePasswordEncryption", "PasswordNeverExpires", "TrustedForDelegation")]
+        [String] $PropertyFlag,
 
+        [Parameter(Position = 4, Mandatory = $false)]
+        [String] $Principal = "Everyone",
 
-        [Parameter(Position = 4, Mandatory = $False)]
-        [String]
-        $Principal = "Everyone",
+        [Parameter(Position = 5, Mandatory = $false)]
+        [ValidateSet("GenericAll", "GenericRead", "GenericWrite", "ReadControl", "ReadProperty", "WriteDacl", "WriteOwner", "WriteProperty")]
+        [String] $Right = "ReadProperty",
 
-        [Parameter(Position = 5, Mandatory = $False)]
-        [String]
-        [ValidateSet ("GenericAll","GenericRead","GenericWrite","ReadControl","ReadProperty","WriteDacl","WriteOwner","WriteProperty")]
-        $Right = "ReadProperty",
+        [Parameter(Position = 6, Mandatory = $false)]
+        [String] $GUID,
 
-        [Parameter(Position = 6, Mandatory = $False)]
-        [String]
-        $GUID,
+        [Parameter(Position = 7, Mandatory = $false)]
+        [ValidateSet("Success", "Failure")]
+        [String] $AuditFlag = "Success",
 
-        [Parameter(Position = 7, Mandatory = $False)]
-        [String]
-        [ValidateSet ("Success","Failure")]
-        $AuditFlag = "Success",
-
-        [Parameter(Mandatory = $False)]
-        [Bool]
-        $RemoveAuditing = $False
+        [Parameter(Mandatory = $false)]
+        [Bool] $RemoveAuditing = $false
     )
 
-    process {
-        if ($SPN) {
-            Write-Verbose "Setting $SPN to decoy computer $ComputerName."
-            Set-ADComputer -Identity $ComputerName -ServicePrincipalNames @{Add=$SPN}
-        }
+    if ($SPN) {
+        Write-Verbose "Setting SPN '$SPN' on computer '$ComputerName'."
+        Set-ADComputer -Identity $ComputerName -ServicePrincipalNames @{ Add = $SPN }
+    }
 
-        if ($OperatingSystem) {
-            Write-Verbose "Setting $OperatingSystem to decoy computer $ComputerName."
-            Set-ADComputer -OperatingSystem $OperatingSystem -Identity $ComputerName
-        }
+    if ($OperatingSystem) {
+        Write-Verbose "Setting OperatingSystem '$OperatingSystem' on computer '$ComputerName'."
+        Set-ADComputer -Identity $ComputerName -OperatingSystem $OperatingSystem
+    }
 
-        if ($PropertyFlag) {
-            Write-Verbose "Setting $PropertyFlag to decoy computer $ComputerName."
-            switch ($PropertyFlag) {
-                "AllowReversiblePasswordEncryption" {
-                    Set-ADComputer -Identity $ComputerName -AllowReversiblePasswordEncryption $true
-                }
-                "PasswordNeverExpires" {
-                    Set-ADComputer -Identity $ComputerName -PasswordNeverExpires $true
-                }
-                "TrustedForDelegation" {
-                    Set-ADComputer -Identity $ComputerName -TrustedForDelegation $true
-                }
+    if ($PropertyFlag) {
+        Write-Verbose "Setting $PropertyFlag on computer '$ComputerName'."
+        switch ($PropertyFlag) {
+            "AllowReversiblePasswordEncryption" {
+                Set-ADComputer -Identity $ComputerName -AllowReversiblePasswordEncryption $true
+            }
+            "PasswordNeverExpires" {
+                Set-ADComputer -Identity $ComputerName -PasswordNeverExpires $true
+            }
+            "TrustedForDelegation" {
+                Set-ADComputer -Identity $ComputerName -TrustedForDelegation $true
             }
         }
-
-        Set-AuditRule -ComputerName $ComputerName -Principal $Principal -Right $Right -GUID $GUID -AuditFlag $AuditFlag -RemoveAuditing $RemoveAuditing
     }
+
+    # Get the AD object path and call Set-AuditRule (replicating working pattern)
+    $ComputerObject = Get-ADComputer -Identity $ComputerName
+    $AdObjectPath = "AD:$($ComputerObject.DistinguishedName)"
+
+    Write-Verbose "Setting audit rule on $AdObjectPath for principal '$Principal' with right '$Right'."
+
+    Set-AuditRule -AdObjectPath $AdObjectPath -WellKnownSidType WorldSid -Rights $Right -InheritanceFlags None -AuditFlags $AuditFlag -AttributeGUID $GUID -RemoveAuditing:$RemoveAuditing
 }
+
 
 function Deploy-GroupDeception
 {
