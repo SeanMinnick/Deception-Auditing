@@ -122,14 +122,14 @@ New-DecoyOU -OUName "FakeUsers" -ParentDistinguishedName "OU=Departments,DC=doma
 -ParentDistinguishedName --> Optional parameter for where to create the OU, defaults to domain root
 
 ## New-DecoyGPO
-Creates a decoy Group Policy Object (GPO) that can be linked to an OU and enhanced with fake scripts and visibility bait.
+Creates a decoy Group Policy Object (GPO) that can be linked to an OU and enhanced with visibility bait.
 
 ### Examples:
 New-DecoyGPO -Name "PrivilegedAccessBackup"
 
 New-DecoyGPO -Name "Legacy-Security-Policy" -Comment "Legacy config - under review" -TargetOU "OU=Decoys,DC=domain,DC=com"
 
-New-DecoyGPO -Name "FakeLogonPolicy" -TargetOU "OU=FakeOU,DC=domain,DC=com" -AddFakeScripts -MakeReadable
+New-DecoyGPO -Name "FakeLogonPolicy" -TargetOU "OU=FakeOU,DC=domain,DC=com" -MakeReadable
 
 ### Parameters:
 -Name --> Name of the decoy GPO to create
@@ -137,8 +137,6 @@ New-DecoyGPO -Name "FakeLogonPolicy" -TargetOU "OU=FakeOU,DC=domain,DC=com" -Add
 -Comment --> Optional description visible in GPMC
 
 -TargetOU --> Optional Distinguished Name of the OU to link the GPO to
-
--AddFakeScripts --> Adds fake logon scripts to SYSVOL (optional switch)
 
 -MakeReadable --> Grants GPO read access to Authenticated Users for increased discoverability (optional switch)
 
