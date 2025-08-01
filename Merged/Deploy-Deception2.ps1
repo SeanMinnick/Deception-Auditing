@@ -261,7 +261,7 @@ function New-DecoyGPO {
         $gpo = Get-GPO -Name $Name -ErrorAction Stop
 
         if ($Comment) {
-            (Get-GPO -Guid $gpo.Id).Comment = $Comment
+            (Get-GPO -Guid $gpo.Id).Description = $Comment
             Write-Verbose "Set GPO comment: $Comment"
         }
 
@@ -271,7 +271,7 @@ function New-DecoyGPO {
             Start-Sleep -Seconds 2
             $gpoCheck = Get-GPO -Name $Name -ErrorAction Stop
             if ($gpoCheck) {
-                New-GPLink -Name $Name -Target $TargetOU -Enforced "Yes"
+                New-GPLink -Guid $gpo.Id -Target $TargetOU -LinkEnabled "Yes"
                 Write-Verbose "Linked GPO to OU: $TargetOU"
             }
         }
