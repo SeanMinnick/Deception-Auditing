@@ -238,8 +238,7 @@ function New-DecoyGPO {
     If set, grants GpoRead to "Authenticated Users" for enumeration bait.
 
     .EXAMPLE
-    New-DecoyGPO -Name "PrivilegedAccessBackup" -Comment "Legacy GPO for admin access" `
-                 -TargetOU "OU=Decoys,DC=domain,DC=com" -AddFakeScripts -MakeReadable
+    New-DecoyGPO -Name "PrivilegedAccessBackup" -Comment "Legacy GPO for admin access" -TargetOU "OU=Decoys,DC=domain,DC=com" -MakeReadable
     #>
     [CmdletBinding()]
     param (
