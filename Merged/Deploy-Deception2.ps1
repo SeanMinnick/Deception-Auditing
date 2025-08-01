@@ -256,7 +256,9 @@ function New-DecoyGPO {
     )
 
     try {
-        $gpo = New-GPO -Name $Name
+        New-GPO -Name $Name | Out-Null
+        Start-Sleep -Seconds 2
+        $gpo = Get-GPO -Name $Name -ErrorAction Stop
 
         if ($Comment) {
             Set-GPO -Guid $gpo.Id -Comment $Comment
