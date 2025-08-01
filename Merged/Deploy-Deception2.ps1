@@ -266,8 +266,12 @@ function New-DecoyGPO {
         Write-Verbose "Created GPO: $($gpo.DisplayName) [$($gpo.Id)]"
 
         if ($TargetOU) {
-            New-GPLink -Name $Name -Target $TargetOU -Enforced "Yes"
-            Write-Verbose "Linked GPO to OU: $TargetOU"
+            Start-Sleep -Seconds 2
+            $gpoCheck = Get-GPO -Name $Name -ErrorAction Stop
+            if ($gpoCheck) {
+                New-GPLink -Name $Name -Target $TargetOU -Enforced "Yes"
+                Write-Verbose "Linked GPO to OU: $TargetOU"
+            }
         }
 
         if ($MakeReadable) {
