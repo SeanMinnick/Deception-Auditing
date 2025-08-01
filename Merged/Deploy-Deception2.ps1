@@ -261,7 +261,7 @@ function New-DecoyGPO {
         $gpo = Get-GPO -Name $Name -ErrorAction Stop
 
         if ($Comment) {
-            Set-GPO -Guid $gpo.Id -Comment $Comment
+            (Get-GPO -Guid $gpo.Id).Comment = $Comment
             Write-Verbose "Set GPO comment: $Comment"
         }
 
