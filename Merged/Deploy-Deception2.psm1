@@ -2,7 +2,7 @@
 <#
 Import this module to load all the functions in Deploy-Deception in the current PowerShell session.
 
-PS > Import-Module C:\Deploy-Deception\Deploy-Deception.psm1
+PS > Import-Module C:\Deploy-Deception\Deploy-Deception2.psm1
 
 #>
 
